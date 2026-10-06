@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ewallet-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: ewallet_db
+    ports:
+      - "5433:5432"

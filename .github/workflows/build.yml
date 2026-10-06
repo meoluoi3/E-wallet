@@ -1,0 +1,28 @@
+name: E-Wallet CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      #  Checkout repo code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'oracle'
+          cache: maven
+
+      - name: Build and Test with Maven
+        run: |
+          cd eWallet
+          mvn clean verify
