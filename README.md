@@ -58,7 +58,7 @@
 
 | Thành phần | Công nghệ | Mục đích                        |
 |---|---|---------------------------------|
-| Ngôn ngữ | Java 27 | Ngôn ngữ chính                  |
+| Ngôn ngữ | Java 21 | Ngôn ngữ chính                  |
 | Framework | Spring Boot 4.1.1 | REST API                        |
 | Bảo mật | Spring Security + JWT (HS256) | Đăng nhập, xác thực qua filter  |
 | ORM | Spring Data JPA / Hibernate | Repository, ánh xạ O/R          |

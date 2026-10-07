@@ -8,3 +8,19 @@ services:
       POSTGRES_DB: ewallet_db
     ports:
       - "5433:5432"
+
+  app:
+    build:
+      context: ./eWallet
+      dockerfile: Dockerfile
+
+    container_name: ewallet-app
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ewallet_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password123
+    depends_on:
+      - postgres
+    restart: unless-stopped
