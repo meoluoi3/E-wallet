@@ -252,6 +252,56 @@ E-wallet/
 | `users` – `transactions` (gửi) | 1 – N  | Các giao dịch người dùng là bên gửi |
 | `users` – `transactions` (nhận) | 1 – N  |  Các giao dịch người dùng là bên nhận |
 
+
+```mermaid
+erDiagram
+    USERS ||--|| WALLETS : "sở hữu (tạo khi đăng ký)"
+    USERS |o--o{ TRANSACTIONS : "gửi (sender_id)"
+    USERS ||--o{ TRANSACTIONS : "nhận (receiver_id)"
+
+    USERS {
+        UUID id PK
+        VARCHAR username UK "NOT NULL"
+        VARCHAR phone UK "NOT NULL"
+        VARCHAR email
+        VARCHAR full_name "NOT NULL"
+        VARCHAR password_hash "BCrypt, NOT NULL"
+        VARCHAR status "ACTIVE | CLOSED"
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+        TIMESTAMPTZ deleted_at "NULL = chưa đóng"
+    }
+
+    WALLETS {
+        UUID id PK
+        UUID user_id FK, UK "1 - 1 với users"
+        VARCHAR wallet_number UK "số ví hiển thị"
+        CHAR currency "mặc định VND"
+        NUMERIC balance "CHECK >= 0"
+        VARCHAR status "ACTIVE | CLOSED"
+        BIGINT version "optimistic lock"
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    TRANSACTIONS {
+        UUID id PK
+        VARCHAR transaction_code UK "mã tra cứu"
+        VARCHAR idempotency_key "chống gửi trùng"
+        VARCHAR type "DEPOSIT | TRANSFER"
+        VARCHAR status "PENDING | SUCCESS | FAILED"
+        UUID sender_id FK "NULL nếu DEPOSIT"
+        UUID receiver_id FK "NOT NULL"
+        NUMERIC amount "CHECK > 0"
+        CHAR currency "mặc định VND"
+        NUMERIC sender_balance_after "NULL nếu DEPOSIT"
+        NUMERIC receiver_balance_after
+        VARCHAR description
+        VARCHAR failure_reason
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ completed_at
+    }
+```
 ## 7. Đặc tả API
 
 
