@@ -1,6 +1,6 @@
-#  E-Wallet Backend 
+﻿#  E-Wallet Backend 
 
-> Bài tập lớn – **Pha 1**: Xây dựng dịch vụ backend Ví điện tử (E-Wallet) với các chức năng cơ bản.
+> Bài tập lớn - **Pha 1**: Xây dựng dịch vụ backend Ví điện tử (E-Wallet) với các chức năng cơ bản.
 > Pha 2 sẽ dựa trên mã nguồn này để cải tiến các thuộc tính chất lượng.
 
 ---
@@ -34,7 +34,7 @@
 
 -  REST API, giao tiếp qua **JSON**, đủ các method **GET / POST / DELETE**.
 -  Tài liệu API tự động bằng **OpenAPI / Swagger UI**.
--  Kiến trúc 3 lớp: `API → Business → Data Access`; tầng Business không phụ thuộc framework web hay thư viện DB.
+-  Kiến trúc 3 lớp đơn giản: `API (Controller) → Business (Service) → Data Access (Repository)`.
 -  Truy cập dữ liệu qua **Repository pattern** + **ORM (Spring Data JPA / Hibernate)**.
 -  Đăng nhập & xác thực tập trung tại Security Filter, không lặp lại trong từng endpoint.
 -  Đóng gói bằng **Docker** / **Docker Compose**.
@@ -48,7 +48,7 @@
 |:---:|---------------|----------|-----------------------|---|
 | 1 | Đinh Quang Tuân | 24021654 | Backend / Security    | User, đăng ký/đăng nhập, JWT, Spring Security |
 | 2 | Đặng Duy Anh  | 24021358 | Backend / Wallet      | Wallet, số dư, Wallet Service, Wallet Repository |
-| 3 | Lê Tùng Dương_ | 24021438 | Backend / Transaction | Transaction, chuyển tiền, business logic giao dịch, transaction history |
+| 3 | Lê Tùng Dương | 24021438 | Backend / Transaction | Transaction, chuyển tiền, business logic giao dịch, transaction history |
 | 4 | Hoàng Đức Nhuận | 24021590 | DevOps / QA           | DTO, Mapper, Swagger/OpenAPI, Docker, integration & load testing trên Kaggle |
 
 
@@ -80,19 +80,17 @@ flowchart TD
     C["Clients"]
     S["Spring Security"]
     API[" API<br/>Controller + DTO"]
-    B[" Business<br/>Service + Port"]
-    A[" Data<br/>Adapter + Repository"]
+    B[" Business<br/>Service"]
+    A[" Data<br/>Repository"]
     DB[("PostgreSQL")]
 
     C --> S --> API --> B --> A --> DB
-    A -.->|"implements Port"| B
 ```
 ### 4.2. Nguyên tắc phụ thuộc (Dependency Rule)
 
 ```
-   api ───────────▶ business ◀─────────── data
- (Controller)      (Service,           (Adapter implements
-                    Port interface)      Port interface)
+   api ───────────▶ business ───────────▶ data
+ (Controller)       (Service)         (Repository)
 ```
 
 ### 4.3. Luồng xử lý một request (Ví dụ: Chuyển tiền)
@@ -132,7 +130,7 @@ sequenceDiagram
     API-->>C: 201 Created
 ```
 
-## 5. Cấu trúc thư mục (Dự kiến)
+## 5. Cấu trúc thư mục 
 
 
 ```
@@ -175,13 +173,6 @@ E-wallet/
         │   │
         │   ├── business/                         
         │   │   │                                 
-        │   │   ├── port/
-        │   │   │   ├── UserPort.java
-        │   │   │   ├── WalletPort.java
-        │   │   │   ├── TransactionPort.java
-        │   │   │   ├── PasswordHasher.java
-        │   │   │   └── TokenProvider.java
-        │   │   │
         │   │   ├── service/
         │   │   │   ├── AuthService.java
         │   │   │   ├── UserService.java
@@ -197,20 +188,15 @@ E-wallet/
         │   │
         │   ├── data/                             
         │   │   ├── entity/
-        │   │   │   ├── UserEntity.java
-        │   │   │   ├── WalletEntity.java
-        │   │   │   └── TransactionEntity.java
+        │   │   │   ├── User.java
+        │   │   │   ├── Wallet.java
+        │   │   │   └── Transaction.java
         │   │   │
         │   │   ├── repository/
         │   │   │   ├── UserRepository.java
         │   │   │   ├── WalletRepository.java
         │   │   │   └── TransactionRepository.java
         │   │   │
-        │   │   └── adapter/
-        │   │       ├── UserAdapter.java
-        │   │       ├── WalletAdapter.java
-        │   │       └── TransactionAdapter.java
-        │   │
         │   ├── security/
         │   │   ├── SecurityConfig.java
         │   │   ├── JwtAuthenticationFilter.java
