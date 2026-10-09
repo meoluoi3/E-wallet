@@ -10,9 +10,10 @@ import uet.com.eWallet.data.entity.Transaction;
 import uet.com.eWallet.data.entity.TransactionType;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
     /**
      * Finds a transaction by its publicly exposed transaction code.
@@ -37,7 +38,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             ORDER BY t.createdAt DESC
             """)
     Page<Transaction> findAllByWalletId(
-            @Param("walletId") Long walletId,
+            @Param("walletId") UUID walletId,
             Pageable pageable
     );
 
@@ -56,7 +57,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             ORDER BY t.createdAt DESC
             """)
     Page<Transaction> findAllByWalletIdAndType(
-            @Param("walletId") Long walletId,
+            @Param("walletId") UUID walletId,
             @Param("type") TransactionType type,
             Pageable pageable
     );
