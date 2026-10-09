@@ -79,7 +79,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.code").value(201))
-                .andExpect(jsonPath("$.data.username").value("tuandq"));
+                .andExpect(jsonPath("$.result.username").value("tuandq"));
     }
 
     @Test
@@ -116,6 +116,6 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.accessToken").value("mocked.jwt.token"));
+                .andExpect(jsonPath("$.result.accessToken").value("mocked.jwt.token"));
     }
 }
