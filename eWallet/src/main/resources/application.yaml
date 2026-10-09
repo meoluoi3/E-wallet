@@ -1,6 +1,9 @@
 spring:
   application:
     name: eWallet
+  servlet:
+    multipart:
+      enabled: false
   datasource:
     url: jdbc:postgresql://localhost:5433/ewallet_db
     username: postgres
