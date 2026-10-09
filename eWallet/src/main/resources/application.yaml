@@ -14,5 +14,9 @@ spring:
       ddl-auto: update
     show-sql: true
 
+jwt:
+  secret: eWalletSuperSecretKeyForJwtSigningMustBeAtLeast256BitsLong2026UET
+  expiration-ms: 86400000
+
 server:
   port: 8081
