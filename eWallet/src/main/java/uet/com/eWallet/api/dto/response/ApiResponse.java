@@ -1,4 +1,53 @@
 package uet.com.eWallet.api.dto.response;
 
-public class ApiResponse {
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+@Getter
+@Setter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ApiResponse<T> {
+
+    @Builder.Default
+    int code = 200;
+
+    String message;
+
+    T result;
+
+    public static <T> ApiResponse<T> success(T result) {
+        return ApiResponse.<T>builder()
+                .code(200)
+                .message("Thành công")
+                .result(result)
+                .build();
+    }
+
+    public static <T> ApiResponse<T> success(String message, T result) {
+        return ApiResponse.<T>builder()
+                .code(200)
+                .message(message)
+                .result(result)
+                .build();
+    }
+
+    public static <T> ApiResponse<T> created(T result) {
+        return ApiResponse.<T>builder()
+                .code(201)
+                .message("Tạo mới thành công")
+                .result(result)
+                .build();
+    }
+
+    public static <T> ApiResponse<T> error(int code, String message) {
+        return ApiResponse.<T>builder()
+                .code(code)
+                .message(message)
+                .build();
+    }
 }
