@@ -26,7 +26,19 @@ public enum ErrorCode {
 
     UNAUTHENTICATED(1007, "Chưa xác thực hoặc token không hợp lệ", HttpStatus.UNAUTHORIZED),
 
-    INVALID_INPUT(1008, "Dữ liệu đầu vào không hợp lệ", HttpStatus.BAD_REQUEST);
+    INVALID_INPUT(1008, "Dữ liệu đầu vào không hợp lệ", HttpStatus.BAD_REQUEST),
+
+    WALLET_NOT_FOUND(1009, "Không tìm thấy ví", HttpStatus.NOT_FOUND),
+
+    WALLET_NOT_ACTIVE(1010, "Ví đã bị đóng", HttpStatus.FORBIDDEN),
+
+    INVALID_AMOUNT(1011, "Số tiền phải lớn hơn 0", HttpStatus.BAD_REQUEST),
+
+    INSUFFICIENT_BALANCE(1012, "Số dư không đủ", HttpStatus.UNPROCESSABLE_ENTITY),
+
+    WALLET_ALREADY_EXISTS(1013, "Người dùng đã có ví", HttpStatus.CONFLICT),
+
+    WALLET_NOT_EMPTY(1014, "Không thể đóng ví khi còn số dư", HttpStatus.CONFLICT);
 
     int code;
 
