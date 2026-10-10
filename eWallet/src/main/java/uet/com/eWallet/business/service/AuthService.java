@@ -32,6 +32,8 @@ public class AuthService {
 
     UserMapper userMapper;
 
+    WalletService walletService;
+
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
@@ -57,6 +59,8 @@ public class AuthService {
                 .build();
 
         user = userRepository.save(user);
+
+        walletService.createWallet(user);
 
         return userMapper.toUserResponse(user);
     }
