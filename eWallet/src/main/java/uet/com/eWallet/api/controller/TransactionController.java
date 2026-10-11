@@ -1,26 +1,28 @@
 package uet.com.eWallet.api.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import uet.com.eWallet.api.dto.request.DepositRequest;
 import uet.com.eWallet.api.dto.request.TransferRequest;
 import uet.com.eWallet.api.dto.response.ApiResponse;
+import uet.com.eWallet.api.dto.response.PageResponse;
 import uet.com.eWallet.api.dto.response.TransactionResponse;
 import uet.com.eWallet.business.service.TransactionService;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Tag(name = "Transaction", description = "API liên quan đến giao dịch ")
+@Tag(name = "Transaction", description = "APIs relate to Transaction")
 public class TransactionController {
 
     TransactionService transactionService;
@@ -40,4 +42,25 @@ public class TransactionController {
 
         return ResponseEntity.ok(ApiResponse.success("Nạp tiền thành công", response));
     }
+
+    @Operation(summary = "Lấy lịch sử giao dịch của ví hiện tại", security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping
+    public ResponseEntity<ApiResponse<PageResponse<TransactionResponse>>> getTransactionHistory(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        PageResponse<TransactionResponse> history = transactionService.getHistory(page, size);
+
+        return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử giao dịch thành công", history));
+    }
+
+    @Operation(summary = "Xem chi tiết 1 giao dịch", security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<TransactionResponse>> getTransaction(
+            @PathVariable UUID id
+    ) {
+        TransactionResponse response = transactionService.getTransaction(id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết giao dịch thành công", response));
+    }
+
 }

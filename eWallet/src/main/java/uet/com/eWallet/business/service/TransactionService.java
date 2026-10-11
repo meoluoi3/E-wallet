@@ -3,9 +3,13 @@ package uet.com.eWallet.business.service;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import uet.com.eWallet.api.dto.request.DepositRequest;
 import uet.com.eWallet.api.dto.request.TransferRequest;
+import uet.com.eWallet.api.dto.response.PageResponse;
 import uet.com.eWallet.api.dto.response.TransactionResponse;
 import uet.com.eWallet.data.entity.Transaction;
 import uet.com.eWallet.data.entity.TransactionStatus;
@@ -17,7 +21,7 @@ import uet.com.eWallet.exception.ErrorCode;
 import uet.com.eWallet.mapper.TransactionMapper;
 
 import java.time.Instant;
-import java.util.Objects;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -79,6 +83,35 @@ public class TransactionService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
+        return transactionMapper.toResponse(transaction);
+    }
+
+    public PageResponse<TransactionResponse> getHistory(int page, int size) {
+        Wallet userWallet = walletService.getMyWallet();
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        Page<Transaction> transactionPage = transactionRepository.findAllByWalletId(userWallet.getId(), pageable);
+
+        List<TransactionResponse> content = transactionPage.getContent().stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+
+        return PageResponse.<TransactionResponse>builder()
+                .content(content)
+                .pageNo(page)
+                .pageSize(size)
+                .totalElements(transactionPage.getTotalElements())
+                .totalPages(transactionPage.getTotalPages())
+                .isLast(transactionPage.isLast())
+                .build();
+    }
+
+    public TransactionResponse getTransaction(UUID id) {
+
+        Transaction transaction = transactionRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.TRANSACTION_NOT_FOUND));
+
         return transactionMapper.toResponse(transaction);
     }
 }

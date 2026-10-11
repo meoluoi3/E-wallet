@@ -38,7 +38,9 @@ public enum ErrorCode {
 
     WALLET_ALREADY_EXISTS(1013, "Người dùng đã có ví", HttpStatus.CONFLICT),
 
-    WALLET_NOT_EMPTY(1014, "Không thể đóng ví khi còn số dư", HttpStatus.CONFLICT);
+    WALLET_NOT_EMPTY(1014, "Không thể đóng ví khi còn số dư", HttpStatus.CONFLICT),
+
+    TRANSACTION_NOT_FOUND(1015, "Không tìm thấy giao dịch", HttpStatus.NOT_FOUND);
 
     int code;
 
