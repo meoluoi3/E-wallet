@@ -1,4 +1,4 @@
-﻿#  E-Wallet Backend 
+#  E-Wallet Backend 
 
 > Bài tập lớn - **Pha 1**: Xây dựng dịch vụ backend Ví điện tử (E-Wallet) với các chức năng cơ bản.
 > Pha 2 sẽ dựa trên mã nguồn này để cải tiến các thuộc tính chất lượng.
@@ -127,7 +127,7 @@ sequenceDiagram
     DB-->>D: Success
     D-->>B: Transaction result
     B-->>API: Transaction result
-    API-->>C: 201 Created
+    API-->>C: 200 OK
 ```
 
 ## 5. Cấu trúc thư mục 
@@ -154,61 +154,61 @@ E-wallet/
         │   │   ├── controller/
         │   │   │   ├── AuthController.java
         │   │   │   ├── UserController.java
-        │   │   │   ├── WalletController.java
         │   │   │   └── TransactionController.java
         │   │   │
         │   │   └── dto/
-        │   │       ├── ApiResponse.java
+        │   │       │
         │   │       │
         │   │       ├── request/
         │   │       │   ├── RegisterRequest.java
         │   │       │   ├── LoginRequest.java
+        │   │       │   ├── DepositRequest.java
         │   │       │   └── TransferRequest.java
         │   │       │
         │   │       └── response/
+        │   │           ├── ApiResponse.java
         │   │           ├── LoginResponse.java
         │   │           ├── UserResponse.java
-        │   │           ├── WalletResponse.java
-        │   │           └── TransactionResponse.java
+        │   │           ├── TransactionResponse.java
+        │   │           └── PageResponse.java
         │   │
         │   ├── business/                         
-        │   │   │                                 
-        │   │   ├── service/
-        │   │   │   ├── AuthService.java
-        │   │   │   ├── UserService.java
-        │   │   │   ├── WalletService.java
-        │   │   │   └── TransactionService.java
-        │   │   │
-        │   │   └── exception/
-        │   │       ├── BusinessException.java
-        │   │       ├── UserNotFoundException.java
-        │   │       ├── WalletNotFoundException.java
-        │   │       ├── InsufficientBalanceException.java
-        │   │       └── InvalidTransferException.java
+        │   │   └── service/
+        │   │       ├── AuthService.java
+        │   │       ├── UserService.java
+        │   │       ├── WalletService.java
+        │   │       └── TransactionService.java
         │   │
         │   ├── data/                             
         │   │   ├── entity/
         │   │   │   ├── User.java
+        │   │   │   ├── UserStatus.java
         │   │   │   ├── Wallet.java
-        │   │   │   └── Transaction.java
+        │   │   │   ├── WalletStatus.java
+        │   │   │   ├── Transaction.java
+        │   │   │   ├── TransactionType.java
+        │   │   │   └── TransactionStatus.java
         │   │   │
-        │   │   ├── repository/
-        │   │   │   ├── UserRepository.java
-        │   │   │   ├── WalletRepository.java
-        │   │   │   └── TransactionRepository.java
-        │   │   │
+        │   │   └── repository/
+        │   │       ├── UserRepository.java
+        │   │       ├── WalletRepository.java
+        │   │       └── TransactionRepository.java
+        │   │
         │   ├── security/
         │   │   ├── SecurityConfig.java
         │   │   ├── JwtAuthenticationFilter.java
+        │   │   ├── JwtAuthenticationEntryPoint.java
         │   │   ├── JwtTokenProvider.java
-        │   │   └── BCryptPasswordHasher.java
+        │   │   ├── SecurityUtils.java
+        │   │   └── UserPrincipal.java
         │   │
         │   ├── mapper/
         │   │   ├── UserMapper.java
-        │   │   ├── WalletMapper.java
         │   │   └── TransactionMapper.java
         │   │
         │   ├── exception/
+        │   │   ├── AppException.java
+        │   │   ├── ErrorCode.java
         │   │   └── GlobalExceptionHandler.java
         │   │
         │   └── config/
@@ -219,12 +219,14 @@ E-wallet/
 
         └── test/
             └── java/uet/com/eWallet/
-                ├── architecture/
-                │   └── ArchitectureTest.java
-                │
-                ├── business/
+                ├── EWalletApplicationTests.java
                 ├── api/
-                └── integration/                    
+                │   └── controller/
+                │       ├── AuthControllerTest.java
+                │       └── UserControllerTest.java
+                └── business/
+                    └── service/
+                        └── WalletServiceTest.java
 ```
 
 ---
@@ -276,8 +278,8 @@ erDiagram
         VARCHAR idempotency_key "chống gửi trùng"
         VARCHAR type "DEPOSIT | TRANSFER"
         VARCHAR status "PENDING | SUCCESS | FAILED"
-        UUID sender_id FK "NULL nếu DEPOSIT"
-        UUID receiver_id FK "NOT NULL"
+        UUID sender_wallet_id "NULL nếu DEPOSIT"
+        UUID receiver_wallet_id "NOT NULL"
         NUMERIC amount "CHECK > 0"
         CHAR currency "mặc định VND"
         NUMERIC sender_balance_after "NULL nếu DEPOSIT"
@@ -297,12 +299,12 @@ erDiagram
 |:-:|:---:|-------------------------|-----------------------------------------------|:--------:|:---:|
 | 1 | `POST` | `/auth/register`        | Đăng ký tài khoản (tự động tạo ví, số dư 0)   |  Public  | `201` |
 | 2 | `POST` | `/auth/login`           | Đăng nhập, nhận JWT access token              |  Public  | `200` |
-| 3 | `GET` | `/accounts/me`          | Xem thông tin ví & số dư hiện tại             |   JWT  | `200` |
-| 4 | `POST` | `/accounts/me/deposits` | Nạp tiền vào ví                               |   JWT  | `201` |
-| 5 | `POST` | `/transfers`            | Chuyển tiền sang ví khác                      |   JWT  | `201` |
-| 6 | `GET` | `/transactions`         | Lịch sử giao dịch (phân trang, lọc theo loại) |   JWT  | `200` |
-| 7 | `GET` | `/transactions/{id}`    | Chi tiết một giao dịch                        |   JWT  | `200` |
-| 8 | `DELETE` | `/accounts/me`          | Đóng tài khoản (chỉ khi số dư = 0)            |   JWT  | `204` |
+| 3 | `GET` | `/users/me`             | Xem thông tin người dùng hiện tại             |   JWT  | `200` |
+| 4 | `DELETE` | `/users/me`          | Đóng tài khoản người dùng hiện tại            |   JWT  | `200` |
+| 5 | `POST` | `/transactions/deposit` | Nạp tiền vào ví người dùng hiện tại           |   JWT  | `200` |
+| 6 | `POST` | `/transactions/transfer`| Chuyển tiền sang ví khác                      |   JWT  | `200` |
+| 7 | `GET` | `/transactions`         | Lịch sử giao dịch của ví (phân trang)         |   JWT  | `200` |
+| 8 | `GET` | `/transactions/{id}`    | Chi tiết một giao dịch                        |   JWT  | `200` |
 
 
 ### 7.2. Định dạng phản hồi chung
@@ -315,22 +317,31 @@ erDiagram
 }
 ```
 
-| HTTP | `code` | Ý nghĩa |
-|:---:|:---:|---|
-| 200 / 201 | `1000` | Thành công |
-| 400 | `1001` | Dữ liệu không hợp lệ (validation) |
-| 401 | `1002` | Chưa xác thực / token không hợp lệ hoặc hết hạn |
-| 403 | `1003` | Không có quyền truy cập tài nguyên |
-| 404 | `1004` | Không tìm thấy (user / ví / giao dịch) |
-| 409 | `1005` | Xung đột (username/phone đã tồn tại) |
-| 422 | `2001` | Số dư không đủ |
-| 422 | `2002` | Không thể tự chuyển tiền cho chính mình |
-| 500 | `9999` | Lỗi hệ thống |
+| HTTP | `code` | Tên lỗi | Ý nghĩa |
+|:---:|:---:|---|---|
+| 200 / 201 | `1000` | `SUCCESS` | Thành công |
+| 400 | `1001` | `USER_EXISTED` | Tên đăng nhập đã tồn tại |
+| 400 | `1002` | `PHONE_EXISTED` | Số điện thoại đã tồn tại |
+| 400 | `1003` | `EMAIL_EXISTED` | Email đã tồn tại |
+| 404 | `1004` | `USER_NOT_FOUND` | Không tìm thấy người dùng |
+| 401 | `1005` | `INVALID_CREDENTIALS` | Tên đăng nhập hoặc mật khẩu không chính xác |
+| 403 | `1006` | `ACCOUNT_CLOSED` | Tài khoản đã bị đóng |
+| 401 | `1007` | `UNAUTHENTICATED` | Chưa xác thực hoặc token không hợp lệ |
+| 400 | `1008` | `INVALID_INPUT` | Dữ liệu đầu vào không hợp lệ |
+| 404 | `1009` | `WALLET_NOT_FOUND` | Không tìm thấy ví |
+| 403 | `1010` | `WALLET_NOT_ACTIVE` | Ví đã bị đóng |
+| 400 | `1011` | `INVALID_AMOUNT` | Số tiền phải lớn hơn 0 |
+| 422 | `1012` | `INSUFFICIENT_BALANCE` | Số dư không đủ |
+| 409 | `1013` | `WALLET_ALREADY_EXISTS` | Người dùng đã có ví |
+| 409 | `1014` | `WALLET_NOT_EMPTY` | Không thể đóng ví khi còn số dư |
+| 404 | `1015` | `TRANSACTION_NOT_FOUND` | Không tìm thấy giao dịch |
+| 401 | `1016` | `UNAUTHORIZED` | Bạn không có quyền xem chức năng này |
+| 500 | `9999` | `UNCATEGORIZED_EXCEPTION` | Lỗi hệ thống không xác định |
 
 
 ## 8. Bảo mật & Xác thực
 
-- **Đăng nhập:** `POST /auth/login` → kiểm tra mật khẩu (băm bằng BCrypt) → phát hành JWT (HS256, hạn 60 phút).
+- **Đăng nhập:** `POST /auth/login` → kiểm tra mật khẩu (băm bằng BCrypt) → phát hành JWT (HS256, cấu hình qua `application.yaml`, mặc định hạn 24 giờ).
 - **Xác thực tập trung:** toàn bộ việc kiểm tra token được thực hiện bởi **`JwtAuthenticationFilter`**  trong **Spring Security Filter Chain**.
 
 ```mermaid
