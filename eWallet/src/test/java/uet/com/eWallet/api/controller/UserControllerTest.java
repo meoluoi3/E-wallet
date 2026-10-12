@@ -59,4 +59,15 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.result.username").value("tuandq"))
                 .andExpect(jsonPath("$.result.fullName").value("Đinh Quang Tuân"));
     }
+
+    @Test
+    @DisplayName("DELETE /users/me - Thành công đóng tài khoản trả về 200")
+    void closeAccount_Success_ReturnsOk() throws Exception {
+        org.mockito.Mockito.doNothing().when(userService).closeAccount();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/users/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("Đóng tài khoản thành công"));
+    }
 }

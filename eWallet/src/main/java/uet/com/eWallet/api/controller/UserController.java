@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,5 +31,14 @@ public class UserController {
         UserResponse response = userService.getMyProfile();
 
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+
+    @Operation(summary = "Đóng tài khoản người dùng hiện tại", security = @SecurityRequirement(name = "bearerAuth"))
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> closeAccount() {
+        userService.closeAccount();
+
+        return ResponseEntity.ok(ApiResponse.success("Đóng tài khoản thành công", null));
     }
 }
