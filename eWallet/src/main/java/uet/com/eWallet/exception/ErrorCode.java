@@ -40,7 +40,9 @@ public enum ErrorCode {
 
     WALLET_NOT_EMPTY(1014, "Không thể đóng ví khi còn số dư", HttpStatus.CONFLICT),
 
-    TRANSACTION_NOT_FOUND(1015, "Không tìm thấy giao dịch", HttpStatus.NOT_FOUND);
+    TRANSACTION_NOT_FOUND(1015, "Không tìm thấy giao dịch", HttpStatus.NOT_FOUND),
+
+    UNAUTHORIZED(1016, "Bạn không có quyền xem chức năng này", HttpStatus.UNAUTHORIZED);
 
     int code;
 

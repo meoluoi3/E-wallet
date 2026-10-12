@@ -11,11 +11,12 @@ import java.util.UUID;
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TransferRequest {
 
     @NotNull(message = "ID người dùng không thể để trống")
-    UUID senderWalletId;
+    UUID receiverWalletId;
 
     @NotNull(message = "Số tiền không được để trống")
     @DecimalMin(value = "1.0", message = "Số tiền chuyển phải lớn hơn 0")

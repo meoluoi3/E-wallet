@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import uet.com.eWallet.api.dto.request.DepositRequest;
 import uet.com.eWallet.api.dto.request.TransferRequest;
 import uet.com.eWallet.api.dto.response.PageResponse;
@@ -33,9 +34,10 @@ public class TransactionService {
     WalletService walletService;
     TransactionMapper transactionMapper;
 
+    @Transactional
     public TransactionResponse transfer(TransferRequest request) {
         Wallet senderWallet = walletService.getMyWallet();
-        Wallet receiverWallet = walletService.getWalletById(request.getSenderWalletId());
+        Wallet receiverWallet = walletService.getWalletById(request.getReceiverWalletId());
 
         if (senderWallet.getId().equals(receiverWallet.getId())) {
             throw new AppException(ErrorCode.INVALID_INPUT);
@@ -45,7 +47,7 @@ public class TransactionService {
         Wallet updateReceiverWallet = walletService.credit(receiverWallet.getId(), request.getAmount());
 
         Transaction transaction = Transaction.builder()
-                .transactionCode("TRA" + UUID.randomUUID().toString().replace("-", "").substring(0, 15).toUpperCase())
+                .transactionCode("UET" + UUID.randomUUID().toString().replace("-", "").substring(0, 15).toUpperCase())
                 .senderWalletId(senderWallet.getId())
                 .receiverWalletId(receiverWallet.getId())
                 .amount(request.getAmount())
@@ -63,13 +65,14 @@ public class TransactionService {
         return transactionMapper.toResponse(transaction);
     }
 
+    @Transactional
     public TransactionResponse deposit(DepositRequest request) {
         Wallet userWallet = walletService.getMyWallet();
 
         Wallet updateWallet = walletService.credit(userWallet.getId(), request.getAmount());
 
         Transaction transaction = Transaction.builder()
-                .transactionCode("DEP" + UUID.randomUUID().toString().replace("-", "").substring(0, 15).toUpperCase())
+                .transactionCode("VNU" + UUID.randomUUID().toString().replace("-", "").substring(0, 15).toUpperCase())
                 .senderWalletId(null)
                 .receiverWalletId(userWallet.getId())
                 .amount(request.getAmount())
@@ -111,6 +114,15 @@ public class TransactionService {
 
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TRANSACTION_NOT_FOUND));
+
+        Wallet userWallet = walletService.getMyWallet();
+
+        boolean isSender = userWallet.getId().equals(transaction.getSenderWalletId());
+        boolean isReceiver = userWallet.getId().equals(transaction.getReceiverWalletId());
+
+        if (!isSender && !isReceiver) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
 
         return transactionMapper.toResponse(transaction);
     }
