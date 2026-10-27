@@ -1,0 +1,488 @@
+openapi: 3.0.3
+info:
+  title: E-Wallet API
+  version: 1.0.0
+  description: REST API Specification for E-Wallet Backend System (Phase 1)
+  contact:
+    name: E-Wallet UET Team
+servers:
+  - url: http://localhost:8081
+    description: Local Development Server
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Đăng ký tài khoản mới
+      description: Tạo tài khoản người dùng mới và tự động khởi tạo một ví điện tử với số dư 0 VND.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApiResponse'
+        '400':
+          description: Dữ liệu không hợp lệ hoặc thông tin đã tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorApiResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Đăng nhập và nhận JWT token
+      description: Xác thực bằng username và password, trả về JWT access token có hiệu lực 24 giờ.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginApiResponse'
+        '401':
+          description: Sai thông tin đăng nhập
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorApiResponse'
+
+  /users/me:
+    get:
+      tags:
+        - User
+      summary: Lấy thông tin người dùng hiện tại
+      description: Lấy thông tin tài khoản và thông tin ví kèm số dư hiện tại của người dùng đang đăng nhập.
+      operationId: getMyProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApiResponse'
+        '401':
+          description: Chưa xác thực token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorApiResponse'
+    delete:
+      tags:
+        - User
+      summary: Đóng tài khoản người dùng hiện tại
+      description: Đóng tài khoản (soft delete). Yêu cầu ví phải có số dư bằng 0.
+      operationId: closeAccount
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Đóng tài khoản thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidApiResponse'
+        '409':
+          description: Ví vẫn còn số dư, không thể đóng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorApiResponse'
+
+  /transactions/deposit:
+    post:
+      tags:
+        - Transaction
+      summary: Nạp tiền vào ví
+      description: Nạp một khoản tiền vào ví của người dùng hiện tại.
+      operationId: deposit
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositRequest'
+      responses:
+        '200':
+          description: Nạp tiền thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionApiResponse'
+        '400':
+          description: Số tiền không hợp lệ (nhỏ hơn hoặc bằng 0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorApiResponse'
+
+  /transactions/transfer:
+    post:
+      tags:
+        - Transaction
+      summary: Chuyển tiền giữa 2 ví
+      description: Chuyển tiền từ ví hiện tại tới ví của người nhận thông qua receiverWalletId.
+      operationId: transfer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: Chuyển tiền thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionApiResponse'
+        '400':
+          description: Dữ liệu không hợp lệ hoặc chuyển cho chính mình
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorApiResponse'
+        '422':
+          description: Số dư không đủ để thực hiện giao dịch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorApiResponse'
+
+  /transactions:
+    get:
+      tags:
+        - Transaction
+      summary: Lấy lịch sử giao dịch của ví hiện tại
+      description: Trả về danh sách giao dịch phân trang (cả giao dịch gửi và nhận).
+      operationId: getTransactionHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Số trang (bắt đầu từ 1)
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          description: Kích thước trang
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionPageApiResponse'
+
+  /transactions/{id}:
+    get:
+      tags:
+        - Transaction
+      summary: Xem chi tiết 1 giao dịch
+      description: Tra cứu thông tin chi tiết của một giao dịch theo UUID.
+      operationId: getTransaction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: UUID của giao dịch
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lấy chi tiết thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionApiResponse'
+        '404':
+          description: Không tìm thấy giao dịch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorApiResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Nhập JWT token vào đây (không cần thêm tiền tố 'Bearer ')
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+        - fullName
+        - phone
+      properties:
+        username:
+          type: string
+          example: tuandq2056
+        password:
+          type: string
+          format: password
+          example: password123
+        fullName:
+          type: string
+          example: Đinh Quang Tuân
+        phone:
+          type: string
+          example: "0912345678"
+        email:
+          type: string
+          format: email
+          example: tuandq@example.com
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: tuandq2056
+        password:
+          type: string
+          format: password
+          example: password123
+
+    DepositRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          minimum: 1
+          example: 100000
+        description:
+          type: string
+          example: Nạp tiền từ ngân hàng
+
+    TransferRequest:
+      type: object
+      required:
+        - receiverWalletId
+        - amount
+      properties:
+        receiverWalletId:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        amount:
+          type: number
+          minimum: 1
+          example: 50000
+        description:
+          type: string
+          example: Chuyển tiền ăn trưa
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, CLOSED]
+        walletNumber:
+          type: string
+        balance:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        transactionCode:
+          type: string
+          example: UET1A2B3C4D5E6F789
+        type:
+          type: string
+          enum: [DEPOSIT, TRANSFER]
+        status:
+          type: string
+          enum: [PENDING, SUCCESS, FAILED]
+        amount:
+          type: number
+        currency:
+          type: string
+          example: VND
+        senderWalletId:
+          type: string
+          format: uuid
+          nullable: true
+        receiverWalletId:
+          type: string
+          format: uuid
+        senderBalanceAfter:
+          type: number
+          nullable: true
+        receiverBalanceAfter:
+          type: number
+        description:
+          type: string
+        failureReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    PageResponseTransactionResponse:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 5
+        pageSize:
+          type: integer
+          example: 10
+        totalElements:
+          type: integer
+          example: 48
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+
+    UserApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1000
+        message:
+          type: string
+          example: Success
+        result:
+          $ref: '#/components/schemas/UserResponse'
+
+    LoginApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1000
+        message:
+          type: string
+          example: Đăng nhập thành công
+        result:
+          $ref: '#/components/schemas/LoginResponse'
+
+    TransactionApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1000
+        message:
+          type: string
+          example: Chuyển tiền thành công
+        result:
+          $ref: '#/components/schemas/TransactionResponse'
+
+    TransactionPageApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1000
+        message:
+          type: string
+          example: Lấy lịch sử giao dịch thành công
+        result:
+          $ref: '#/components/schemas/PageResponseTransactionResponse'
+
+    VoidApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1000
+        message:
+          type: string
+          example: Đóng tài khoản thành công
+        result:
+          type: object
+          nullable: true
+
+    ErrorApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1012
+        message:
+          type: string
+          example: Số dư không đủ
+        result:
+          type: object
+          nullable: true
