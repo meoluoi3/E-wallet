@@ -30,6 +30,8 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class TransactionService {
 
+    static final int MAX_PAGE_SIZE = 100;
+
     TransactionRepository transactionRepository;
     WalletService walletService;
     TransactionMapper transactionMapper;
@@ -92,6 +94,10 @@ public class TransactionService {
     }
 
     public PageResponse<TransactionResponse> getHistory(int page, int size) {
+        if (page < 1 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new AppException(ErrorCode.INVALID_INPUT);
+        }
+
         Wallet userWallet = walletService.getMyWallet();
 
         Pageable pageable = PageRequest.of(page - 1, size);

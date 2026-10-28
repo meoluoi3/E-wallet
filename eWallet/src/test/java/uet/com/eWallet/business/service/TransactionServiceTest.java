@@ -192,6 +192,20 @@ class TransactionServiceTest {
         assertEquals(List.of(mapped), result.getContent());
     }
 
+    @Test
+    void getHistoryRejectsPageBelowOne() {
+        assertError(ErrorCode.INVALID_INPUT, () -> transactionService.getHistory(0, 10));
+        verifyNoInteractions(transactionRepository);
+    }
+
+    @Test
+    void getHistoryRejectsSizeOutsideAllowedRange() {
+        assertError(ErrorCode.INVALID_INPUT, () -> transactionService.getHistory(1, 0));
+        assertError(ErrorCode.INVALID_INPUT,
+                () -> transactionService.getHistory(1, TransactionService.MAX_PAGE_SIZE + 1));
+        verifyNoInteractions(transactionRepository);
+    }
+
     // ---------- getTransaction ----------
 
     @Test

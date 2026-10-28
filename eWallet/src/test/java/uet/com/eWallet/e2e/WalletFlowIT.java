@@ -82,6 +82,45 @@ class WalletFlowIT {
     }
 
     @Test
+    @DisplayName("Đăng ký trùng username cùng lúc: một request thành công, request còn lại báo trùng (không phải 500)")
+    void simultaneousRegistrationWithSameUsernameIsRejectedCleanly() throws Exception {
+        String username = "u" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
+        int attempts = 8;
+        var start = new java.util.concurrent.CountDownLatch(1);
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(attempts);
+        var results = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+        for (int i = 0; i < attempts; i++) {
+            String body = json.writeValueAsString(registerBody(username, randomPhone()));
+            results.add(pool.submit(() -> {
+                start.await();
+                return mvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
+                        .andReturn().getResponse().getStatus();
+            }));
+        }
+        start.countDown();
+        int created = 0;
+        for (var result : results) {
+            int status = result.get();
+            if (status == 201) created++;
+            else assertEquals(400, status, "a duplicate must be reported as 400, not a server error");
+        }
+        pool.shutdown();
+
+        assertEquals(1, created);
+    }
+
+    @Test
+    @DisplayName("Phân trang sai (page < 1, size quá lớn) trả 400 thay vì 500")
+    void invalidPagingIsRejected() throws Exception {
+        Account account = newAccount();
+
+        mvc.perform(get("/transactions?page=0&size=10").header("Authorization", "Bearer " + account.token))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/transactions?page=1&size=100000").header("Authorization", "Bearer " + account.token))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("Sai mật khẩu trả 401")
     void wrongPasswordIsRejected() throws Exception {
         Account account = newAccount();

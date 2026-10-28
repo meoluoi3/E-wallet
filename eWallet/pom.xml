@@ -121,7 +121,21 @@
             <!-- Unit tests (*Test) run in `test`; end-to-end tests (*IT) run in `integration-test`. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <JWT_SECRET>test-only-secret-key-for-unit-and-e2e-tests-at-least-256-bits-long</JWT_SECRET>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <JWT_SECRET>test-only-secret-key-for-unit-and-e2e-tests-at-least-256-bits-long</JWT_SECRET>
+                    </environmentVariables>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

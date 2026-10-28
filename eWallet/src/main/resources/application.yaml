@@ -15,7 +15,7 @@ spring:
     show-sql: true
 
 jwt:
-  secret: eWalletSuperSecretKeyForJwtSigningMustBeAtLeast256BitsLong2026UET
+  secret: ${JWT_SECRET}
   expiration-ms: 86400000
 
 server:
