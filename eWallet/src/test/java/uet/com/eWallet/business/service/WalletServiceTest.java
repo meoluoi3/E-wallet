@@ -99,30 +99,6 @@ class WalletServiceTest {
     }
 
     @Test
-    void getWalletByUserIdReturnsWallet() {
-        UUID userId = UUID.randomUUID();
-        Wallet wallet = wallet("0", WalletStatus.ACTIVE);
-        when(walletRepository.findByUser_Id(userId)).thenReturn(Optional.of(wallet));
-
-        assertSame(wallet, walletService.getWalletByUserId(userId));
-    }
-
-    @Test
-    void getWalletByUserIdRejectsMissingWallet() {
-        UUID userId = UUID.randomUUID();
-
-        assertError(ErrorCode.WALLET_NOT_FOUND, () -> walletService.getWalletByUserId(userId));
-
-        verify(walletRepository).findByUser_Id(userId);
-    }
-
-    @Test
-    void getWalletByUserIdRejectsNullId() {
-        assertError(ErrorCode.INVALID_INPUT, () -> walletService.getWalletByUserId(null));
-        verifyNoInteractions(walletRepository);
-    }
-
-    @Test
     void getWalletByIdReturnsWallet() {
         Wallet wallet = wallet("0", WalletStatus.ACTIVE);
         when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
@@ -151,6 +127,15 @@ class WalletServiceTest {
 
         assertSame(wallet, walletService.getMyWallet());
         verify(walletRepository).findByUser_Id(userId);
+    }
+
+    @Test
+    void getMyWalletRejectsUserWithoutWallet() {
+        UUID userId = UUID.randomUUID();
+        authenticate(userId);
+        when(walletRepository.findByUser_Id(userId)).thenReturn(Optional.empty());
+
+        assertError(ErrorCode.WALLET_NOT_FOUND, () -> walletService.getMyWallet());
     }
 
     @Test

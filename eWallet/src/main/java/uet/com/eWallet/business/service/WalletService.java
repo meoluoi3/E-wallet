@@ -51,15 +51,6 @@ public class WalletService {
         return walletRepository.save(wallet);
     }
 
-    public Wallet getWalletByUserId(UUID userId) {
-        if (userId == null) {
-            throw new AppException(ErrorCode.INVALID_INPUT);
-        }
-
-        return walletRepository.findByUser_Id(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_FOUND));
-    }
-
     public Wallet getWalletById(UUID walletId) {
         if (walletId == null) {
             throw new AppException(ErrorCode.INVALID_INPUT);
@@ -75,7 +66,8 @@ public class WalletService {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        return getWalletByUserId(currentUserId);
+        return walletRepository.findByUser_Id(currentUserId)
+                .orElseThrow(() -> new AppException(ErrorCode.WALLET_NOT_FOUND));
     }
 
     public UUID getMyWalletId() {
