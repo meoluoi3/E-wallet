@@ -32,13 +32,71 @@ jobs:
           done
           echo "PostgreSQL is ready!"
 
-      - name: Run Unit & Mock Tests
+      - name: Run unit tests, end-to-end tests and coverage
         run: |
           cd eWallet
           chmod +x mvnw
-          ./mvnw clean test
+          ./mvnw -B clean verify -Dmaven.test.failure.ignore=true
+
+      - name: Publish test and coverage summary
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv, glob, xml.etree.ElementTree as ET
+
+          def totals(pattern):
+              t = f = e = s = 0
+              for path in glob.glob(pattern):
+                  root = ET.parse(path).getroot()
+                  t += int(root.get("tests", 0)); f += int(root.get("failures", 0))
+                  e += int(root.get("errors", 0)); s += int(root.get("skipped", 0))
+              return t, f + e, s
+
+          print("## Test results\n")
+          print("| Suite | Tests | Failed | Skipped |\n|---|---|---|---|")
+          for name, pattern in (("Unit (surefire)", "eWallet/target/surefire-reports/TEST-*.xml"),
+                                ("End-to-end (failsafe)", "eWallet/target/failsafe-reports/TEST-*.xml")):
+              t, f, s = totals(pattern)
+              print(f"| {name} | {t} | {f} | {s} |")
+
+          rows = list(csv.DictReader(open("eWallet/target/site/jacoco/jacoco.csv")))
+          covered = sum(int(r["LINE_COVERED"]) for r in rows)
+          total = covered + sum(int(r["LINE_MISSED"]) for r in rows)
+          print(f"\n## Coverage\n\nLine coverage: **{100 * covered / total:.1f}%** ({covered}/{total})")
+          PY
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-coverage-reports
+          path: |
+            eWallet/target/surefire-reports
+            eWallet/target/failsafe-reports
+            eWallet/target/site/jacoco
+
+      - name: Fail the build on test failures or low coverage
+        run: |
+          python3 - <<'PY'
+          import csv, glob, sys, xml.etree.ElementTree as ET
+
+          failed = 0
+          for path in glob.glob("eWallet/target/*-reports/TEST-*.xml"):
+              root = ET.parse(path).getroot()
+              failed += int(root.get("failures", 0)) + int(root.get("errors", 0))
+          if failed:
+              sys.exit(f"{failed} test(s) failed")
+
+          rows = list(csv.DictReader(open("eWallet/target/site/jacoco/jacoco.csv")))
+          covered = sum(int(r["LINE_COVERED"]) for r in rows)
+          total = covered + sum(int(r["LINE_MISSED"]) for r in rows)
+          pct = 100 * covered / total
+          print(f"line coverage {pct:.1f}%")
+          if pct < 70:
+              sys.exit(f"line coverage {pct:.1f}% is below the 70% gate")
+          PY
 
       - name: Build Application Package
         run: |
           cd eWallet
-          ./mvnw package -DskipTests
+          ./mvnw -B package -DskipTests
