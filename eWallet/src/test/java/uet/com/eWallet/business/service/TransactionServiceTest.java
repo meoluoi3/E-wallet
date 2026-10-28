@@ -66,8 +66,7 @@ class TransactionServiceTest {
         Wallet senderAfter = Wallet.builder().id(senderWallet.getId()).balance(new BigDecimal("700")).build();
         Wallet receiverAfter = Wallet.builder().id(receiverWallet.getId()).balance(new BigDecimal("800")).build();
 
-        when(walletService.getMyWallet()).thenReturn(senderWallet);
-        when(walletService.getWalletById(receiverWallet.getId())).thenReturn(receiverWallet);
+        when(walletService.getMyWalletId()).thenReturn(senderWallet.getId());
         when(walletService.debit(senderWallet.getId(), amount)).thenReturn(senderAfter);
         when(walletService.credit(receiverWallet.getId(), amount)).thenReturn(receiverAfter);
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
@@ -89,16 +88,17 @@ class TransactionServiceTest {
         assertEquals(0, new BigDecimal("800").compareTo(saved.getReceiverBalanceAfter()));
         assertTrue(saved.getTransactionCode().startsWith("UET"));
         assertNotNull(saved.getCompletedAt());
+        verify(walletService).lockForUpdate(senderWallet.getId(), receiverWallet.getId());
     }
 
     @Test
     void transferRejectsSendingToOwnWallet() {
-        when(walletService.getMyWallet()).thenReturn(senderWallet);
-        when(walletService.getWalletById(senderWallet.getId())).thenReturn(senderWallet);
+        when(walletService.getMyWalletId()).thenReturn(senderWallet.getId());
 
         assertError(ErrorCode.INVALID_INPUT,
                 () -> transactionService.transfer(transferRequest(senderWallet.getId(), BigDecimal.TEN)));
 
+        verify(walletService, never()).lockForUpdate(any());
         verify(walletService, never()).debit(any(), any());
         verify(walletService, never()).credit(any(), any());
         verify(transactionRepository, never()).save(any());
@@ -107,8 +107,7 @@ class TransactionServiceTest {
     @Test
     void transferPropagatesInsufficientBalanceAndDoesNotCreditOrRecord() {
         BigDecimal amount = new BigDecimal("5000");
-        when(walletService.getMyWallet()).thenReturn(senderWallet);
-        when(walletService.getWalletById(receiverWallet.getId())).thenReturn(receiverWallet);
+        when(walletService.getMyWalletId()).thenReturn(senderWallet.getId());
         when(walletService.debit(senderWallet.getId(), amount))
                 .thenThrow(new AppException(ErrorCode.INSUFFICIENT_BALANCE));
 
@@ -122,8 +121,8 @@ class TransactionServiceTest {
     @Test
     void transferRejectsUnknownReceiverWallet() {
         UUID unknown = UUID.randomUUID();
-        when(walletService.getMyWallet()).thenReturn(senderWallet);
-        when(walletService.getWalletById(unknown)).thenThrow(new AppException(ErrorCode.WALLET_NOT_FOUND));
+        when(walletService.getMyWalletId()).thenReturn(senderWallet.getId());
+        doThrow(new AppException(ErrorCode.WALLET_NOT_FOUND)).when(walletService).lockForUpdate(senderWallet.getId(), unknown);
 
         assertError(ErrorCode.WALLET_NOT_FOUND,
                 () -> transactionService.transfer(transferRequest(unknown, BigDecimal.TEN)));
@@ -137,7 +136,7 @@ class TransactionServiceTest {
     void depositCreditsOwnWalletAndRecordsDepositWithoutSender() {
         BigDecimal amount = new BigDecimal("250");
         Wallet after = Wallet.builder().id(senderWallet.getId()).balance(new BigDecimal("1250")).build();
-        when(walletService.getMyWallet()).thenReturn(senderWallet);
+        when(walletService.getMyWalletId()).thenReturn(senderWallet.getId());
         when(walletService.credit(senderWallet.getId(), amount)).thenReturn(after);
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
         when(transactionMapper.toResponse(any(Transaction.class))).thenReturn(TransactionResponse.builder().build());
@@ -160,7 +159,7 @@ class TransactionServiceTest {
 
     @Test
     void depositDoesNotRecordTransactionWhenWalletIsNotActive() {
-        when(walletService.getMyWallet()).thenReturn(senderWallet);
+        when(walletService.getMyWalletId()).thenReturn(senderWallet.getId());
         when(walletService.credit(any(), any())).thenThrow(new AppException(ErrorCode.WALLET_NOT_ACTIVE));
 
         assertError(ErrorCode.WALLET_NOT_ACTIVE,

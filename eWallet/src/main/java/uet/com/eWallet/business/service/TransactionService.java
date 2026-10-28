@@ -36,20 +36,22 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse transfer(TransferRequest request) {
-        Wallet senderWallet = walletService.getMyWallet();
-        Wallet receiverWallet = walletService.getWalletById(request.getReceiverWalletId());
+        UUID senderWalletId = walletService.getMyWalletId();
+        UUID receiverWalletId = request.getReceiverWalletId();
 
-        if (senderWallet.getId().equals(receiverWallet.getId())) {
+        if (senderWalletId.equals(receiverWalletId)) {
             throw new AppException(ErrorCode.INVALID_INPUT);
         }
 
-        Wallet updateSenderWallet = walletService.debit(senderWallet.getId(), request.getAmount());
-        Wallet updateReceiverWallet = walletService.credit(receiverWallet.getId(), request.getAmount());
+        walletService.lockForUpdate(senderWalletId, receiverWalletId);
+
+        Wallet updateSenderWallet = walletService.debit(senderWalletId, request.getAmount());
+        Wallet updateReceiverWallet = walletService.credit(receiverWalletId, request.getAmount());
 
         Transaction transaction = Transaction.builder()
                 .transactionCode("UET" + UUID.randomUUID().toString().replace("-", "").substring(0, 15).toUpperCase())
-                .senderWalletId(senderWallet.getId())
-                .receiverWalletId(receiverWallet.getId())
+                .senderWalletId(senderWalletId)
+                .receiverWalletId(receiverWalletId)
                 .amount(request.getAmount())
                 .currency("VND")
                 .type(TransactionType.TRANSFER)
@@ -67,14 +69,14 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse deposit(DepositRequest request) {
-        Wallet userWallet = walletService.getMyWallet();
+        UUID userWalletId = walletService.getMyWalletId();
 
-        Wallet updateWallet = walletService.credit(userWallet.getId(), request.getAmount());
+        Wallet updateWallet = walletService.credit(userWalletId, request.getAmount());
 
         Transaction transaction = Transaction.builder()
                 .transactionCode("VNU" + UUID.randomUUID().toString().replace("-", "").substring(0, 15).toUpperCase())
                 .senderWalletId(null)
-                .receiverWalletId(userWallet.getId())
+                .receiverWalletId(userWalletId)
                 .amount(request.getAmount())
                 .currency("VND")
                 .type(TransactionType.DEPOSIT)

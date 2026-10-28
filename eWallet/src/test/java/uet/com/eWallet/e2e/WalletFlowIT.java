@@ -231,6 +231,38 @@ class WalletFlowIT {
                 "sender balance must match succeeded transfers; succeeded=" + succeeded);
     }
 
+    @Test
+    @DisplayName("Hai bên chuyển tiền cho nhau cùng lúc: không deadlock, tổng tiền giữ nguyên")
+    void oppositeTransfersDoNotDeadlock() throws Exception {
+        Account alice = newAccount();
+        Account bob = newAccount();
+        deposit(alice, "1000").andExpect(status().isOk());
+        deposit(bob, "1000").andExpect(status().isOk());
+
+        int perSide = 15;
+        var start = new java.util.concurrent.CountDownLatch(1);
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(perSide * 2);
+        var results = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+        for (int i = 0; i < perSide; i++) {
+            results.add(pool.submit(() -> {
+                start.await();
+                return transfer(alice, bob, "10").andReturn().getResponse().getStatus();
+            }));
+            results.add(pool.submit(() -> {
+                start.await();
+                return transfer(bob, alice, "10").andReturn().getResponse().getStatus();
+            }));
+        }
+        start.countDown();
+        for (var result : results) {
+            assertEquals(200, result.get(), "every transfer is affordable, none may fail (deadlock => 500)");
+        }
+        pool.shutdown();
+
+        assertBalance(alice, "1000");
+        assertBalance(bob, "1000");
+    }
+
     // ---------- helpers ----------
 
     record Account(String username, UUID userId, String token) {}
