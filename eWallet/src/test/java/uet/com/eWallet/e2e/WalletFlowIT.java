@@ -132,6 +132,77 @@ class WalletFlowIT {
     }
 
     @Test
+    @DisplayName("Đăng nhập sai 5 lần bị khóa tạm thời, kể cả khi sau đó nhập đúng; user khác không bị ảnh hưởng")
+    void repeatedWrongPasswordsLockTheUsername() throws Exception {
+        Account victim = newAccount();
+        Account other = newAccount();
+
+        for (int i = 0; i < 5; i++) {
+            login(victim.username, "wrong-pass").andExpect(status().isUnauthorized());
+        }
+
+        login(victim.username, PASSWORD)
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value(1017));
+        login(other.username, PASSWORD).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Username không tồn tại cũng bị đếm, nên khóa không lộ tài khoản nào có thật")
+    void unknownUsernameIsLockedTheSameWay() throws Exception {
+        String ghost = "ghost" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+
+        for (int i = 0; i < 5; i++) {
+            login(ghost, "whatever1").andExpect(status().isUnauthorized());
+        }
+
+        login(ghost, "whatever1").andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    @DisplayName("Đăng nhập đúng xóa bộ đếm sai")
+    void successfulLoginResetsFailureCount() throws Exception {
+        Account account = newAccount();
+
+        for (int i = 0; i < 4; i++) {
+            login(account.username, "wrong-pass").andExpect(status().isUnauthorized());
+        }
+        login(account.username, PASSWORD).andExpect(status().isOk());
+        for (int i = 0; i < 4; i++) {
+            login(account.username, "wrong-pass").andExpect(status().isUnauthorized());
+        }
+
+        login(account.username, PASSWORD).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Đăng xuất thu hồi token cũ; đăng nhập lại ra token mới dùng được")
+    void logoutRevokesExistingTokens() throws Exception {
+        Account account = newAccount();
+        String secondDeviceToken = loginToken(account.username);
+
+        mvc.perform(post("/auth/logout").header("Authorization", "Bearer " + account.token))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/users/me").header("Authorization", "Bearer " + account.token))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/users/me").header("Authorization", "Bearer " + secondDeviceToken))
+                .andExpect(status().isUnauthorized());
+
+        String fresh = loginToken(account.username);
+        mvc.perform(get("/users/me").header("Authorization", "Bearer " + fresh))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Đăng xuất phải có token hợp lệ")
+    void logoutRequiresAuthentication() throws Exception {
+        mvc.perform(post("/auth/logout")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/auth/logout").header("Authorization", "Bearer not.a.jwt"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("Gọi API cần đăng nhập mà không có token hoặc token sai trả 401")
     void protectedEndpointsRequireValidToken() throws Exception {
         mvc.perform(get("/transactions")).andExpect(status().isUnauthorized());
@@ -189,7 +260,7 @@ class WalletFlowIT {
 
         Account stranger = newAccount();
         mvc.perform(get("/transactions/" + transactionId).header("Authorization", "Bearer " + stranger.token))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(1016));
     }
 
@@ -346,6 +417,16 @@ class WalletFlowIT {
                         "receiverWalletId", walletOf(to).getId(),
                         "amount", new BigDecimal(amount),
                         "description", "e2e"))));
+    }
+
+    org.springframework.test.web.servlet.ResultActions login(String username, String password) throws Exception {
+        return mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("username", username, "password", password))));
+    }
+
+    String loginToken(String username) throws Exception {
+        MvcResult result = login(username, PASSWORD).andExpect(status().isOk()).andReturn();
+        return read(result).path("result").path("accessToken").asText();
     }
 
     MockHttpServletRequestBuilder authed(MockHttpServletRequestBuilder builder, Account account) {

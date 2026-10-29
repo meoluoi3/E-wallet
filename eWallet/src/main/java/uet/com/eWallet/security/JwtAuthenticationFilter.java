@@ -47,7 +47,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
 
-                if (user.getStatus() == UserStatus.ACTIVE && user.getDeletedAt() == null) {
+                boolean tokenRevoked = jwtTokenProvider.getTokenVersionFromToken(token) != user.getTokenVersion();
+
+                if (user.getStatus() == UserStatus.ACTIVE && user.getDeletedAt() == null && !tokenRevoked) {
                     UserPrincipal principal = UserPrincipal.create(user);
 
                     UsernamePasswordAuthenticationToken authentication =

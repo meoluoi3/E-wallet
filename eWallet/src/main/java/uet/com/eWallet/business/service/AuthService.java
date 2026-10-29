@@ -18,6 +18,10 @@ import uet.com.eWallet.exception.AppException;
 import uet.com.eWallet.exception.ErrorCode;
 import uet.com.eWallet.mapper.UserMapper;
 import uet.com.eWallet.security.JwtTokenProvider;
+import uet.com.eWallet.security.LoginAttemptService;
+import uet.com.eWallet.security.SecurityUtils;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,8 @@ public class AuthService {
     UserMapper userMapper;
 
     WalletService walletService;
+
+    LoginAttemptService loginAttemptService;
 
 
     @Transactional
@@ -67,23 +73,45 @@ public class AuthService {
 
 
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByUsername(request.username().trim())
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
+        String username = request.username().trim();
+        loginAttemptService.assertNotLocked(username);
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        User user = userRepository.findByUsername(username).orElse(null);
+
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            loginAttemptService.recordFailure(username);
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
+
+        loginAttemptService.reset(username);
 
         if (user.getStatus() == UserStatus.CLOSED || user.getDeletedAt() != null) {
             throw new AppException(ErrorCode.ACCOUNT_CLOSED);
         }
 
-        String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername());
+        String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getTokenVersion());
 
         return LoginResponse.builder()
                 .accessToken(token)
                 .tokenType("Bearer")
                 .user(userMapper.toUserResponse(user))
                 .build();
+    }
+
+
+    /** Revokes every token issued so far for the current user, on all devices. */
+    @Transactional
+    public void logout() {
+        UUID currentUserId = SecurityUtils.getCurrentUserId();
+
+        if (currentUserId == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
     }
 }
