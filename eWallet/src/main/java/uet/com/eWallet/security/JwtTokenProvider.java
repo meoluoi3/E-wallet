@@ -27,13 +27,14 @@ public class JwtTokenProvider {
     }
 
 
-    public String generateToken(UUID userId, String username) {
+    public String generateToken(UUID userId, String username, int tokenVersion) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("username", username)
+                .claim("ver", tokenVersion)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -60,6 +61,19 @@ public class JwtTokenProvider {
                 .getPayload();
 
         return claims.get("username", String.class);
+    }
+
+
+    /** Tokens issued before versions existed carry no claim and count as version 0. */
+    public int getTokenVersionFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        Integer version = claims.get("ver", Integer.class);
+        return version == null ? 0 : version;
     }
 
 

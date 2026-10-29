@@ -60,4 +60,9 @@ public class User {
 
     @Column(name = "deleted_at")
     Instant deletedAt;
+
+    /** Raised on logout; tokens carrying an older version are rejected. */
+    @Column(name = "token_version", nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
+    int tokenVersion = 0;
 }

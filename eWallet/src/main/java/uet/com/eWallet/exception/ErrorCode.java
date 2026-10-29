@@ -42,7 +42,9 @@ public enum ErrorCode {
 
     TRANSACTION_NOT_FOUND(1015, "Không tìm thấy giao dịch", HttpStatus.NOT_FOUND),
 
-    UNAUTHORIZED(1016, "Bạn không có quyền xem chức năng này", HttpStatus.UNAUTHORIZED);
+    UNAUTHORIZED(1016, "Bạn không có quyền xem chức năng này", HttpStatus.FORBIDDEN),
+
+    TOO_MANY_LOGIN_ATTEMPTS(1017, "Đăng nhập sai quá nhiều lần, vui lòng thử lại sau 15 phút", HttpStatus.TOO_MANY_REQUESTS);
 
     int code;
 

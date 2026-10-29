@@ -1,6 +1,7 @@
 package uet.com.eWallet.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -46,5 +47,14 @@ public class AuthController {
         LoginResponse response = authService.login(request);
 
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", response));
+    }
+
+
+    @Operation(summary = "Đăng xuất, thu hồi mọi token đang dùng", security = @SecurityRequirement(name = "bearerAuth"))
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout() {
+        authService.logout();
+
+        return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công", null));
     }
 }

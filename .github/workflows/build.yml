@@ -10,6 +10,10 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      # throwaway values for the CI database and tests only
+      DB_PASSWORD: ci-only-db-password
+      JWT_SECRET: ci-only-jwt-secret-key-at-least-256-bits-long-for-github-actions
 
     steps:
       - name: Checkout code
