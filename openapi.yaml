@@ -332,8 +332,6 @@ components:
         status:
           type: string
           enum: [ACTIVE, CLOSED]
-        walletNumber:
-          type: string
         balance:
           type: number
         createdAt:

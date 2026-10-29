@@ -64,10 +64,12 @@ class WalletFlowIT {
     void registerLoginAndReadProfile() throws Exception {
         Account account = newAccount();
 
-        mvc.perform(get("/users/me").header("Authorization", "Bearer " + account.token))
+        MvcResult profile = mvc.perform(get("/users/me").header("Authorization", "Bearer " + account.token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.username").value(account.username))
-                .andExpect(jsonPath("$.result.status").value("ACTIVE"));
+                .andExpect(jsonPath("$.result.status").value("ACTIVE"))
+                .andReturn();
+        assertEquals(0, read(profile).path("result").path("balance").decimalValue().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -244,6 +246,9 @@ class WalletFlowIT {
 
         assertBalance(alice, "700");
         assertBalance(bob, "300");
+
+        assertProfileBalance(alice, "700");
+        assertProfileBalance(bob, "300");
 
         // Alice: deposit + transfer; Bob: transfer only
         mvc.perform(get("/transactions").header("Authorization", "Bearer " + alice.token))
@@ -440,6 +445,14 @@ class WalletFlowIT {
     void assertBalance(Account account, String expected) {
         BigDecimal actual = walletOf(account).getBalance();
         assertEquals(0, new BigDecimal(expected).compareTo(actual), "expected balance " + expected + " but was " + actual);
+    }
+
+    void assertProfileBalance(Account account, String expected) throws Exception {
+        MvcResult profile = mvc.perform(get("/users/me").header("Authorization", "Bearer " + account.token))
+                .andExpect(status().isOk())
+                .andReturn();
+        BigDecimal actual = read(profile).path("result").path("balance").decimalValue();
+        assertEquals(0, new BigDecimal(expected).compareTo(actual), "expected profile balance " + expected + " but was " + actual);
     }
 
     JsonNode read(MvcResult result) throws Exception {
