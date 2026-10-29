@@ -413,6 +413,42 @@ locust -f loadtest/locustfile.py --host=http://localhost:8081
 ```
 Mở trình duyệt truy cập `http://localhost:8089` để cấu hình số lượng User đồng thời và xem biểu đồ throughput (RPS) / latency.
 
+#### Kết quả kiểm thử tải thực tế (Stress Test Report)
+
+**Kịch bản kiểm nghiệm:**
+* **Quy mô tải (Concurrency):** `100 users` đồng thời gửi request liên tục.
+* **Thời gian chạy kiểm thử:** `1 phút` (60 giây).
+* **Thời gian giãn cách (Think time):** Ngẫu nhiên từ `0.1s – 0.5s` giữa các request (`between(0.1, 0.5)`).
+* **Mục tiêu:** Kiểm tra độ ổn định, khả năng chịu tải và đo lường thông lượng (RPS) thực tế của backend dưới áp lực cao.
+
+**1. Chỉ số tổng quan (Overall Summary):**
+
+| Chỉ số đo lường (Metric) | Kết quả thực tế | Ý nghĩa |
+|---|:---:|---|
+| **File dữ liệu nguồn** | `result_stress_stats.csv` | Báo cáo trích xuất trực tiếp từ Locust |
+| **Tổng số request (Total Requests)** | **16,671** | Khối lượng truy vấn xử lý trong 60s |
+| **Tỷ lệ lỗi (Total Failures)** | **0 (0.00%)** | Toàn bộ 16,671 requests đều phản hồi thành công |
+| **Thông lượng (Throughput / RPS)** | **281.81 req/s** | Khả năng phục vụ trung bình hơn 280 req/giây |
+| **Độ trễ phản hồi (Min / Avg / Max)** | 2.5 ms / **44.3 ms** / 6,110.9 ms | Thời gian xử lý trung bình đạt mức 44.3ms |
+| **Phân vị độ trễ (p50 / p90 / p95)** | **6.0 ms** / **14.0 ms** / **17.0 ms** | 95% request hoàn tất dưới 17ms |
+| **p99 Latency / Tỷ lệ p99/p50** | 1,600.0 ms / 266.7 | Độ trễ cao nhất tập trung ở băm mật khẩu khi login/register |
+
+**2. Chi tiết độ trễ và thông lượng theo từng API Endpoint:**
+
+| Endpoint (Display Name) | Tổng Request | Requests/s (RPS) | Median p50 (ms) | 90% (p90) | 95% (p95) | 99% (p99) |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| `POST /auth/register` | 100 | 1.69 | 1,500.0 | 2,600.0 | 3,700.0 | 4,700.0 |
+| `POST /auth/login` | 100 | 1.69 | 1,900.0 | 3,100.0 | 3,700.0 | 5,100.0 |
+| `GET /users/me` | 7,637 | 129.10 | 5.0 | 9.0 | 11.0 | 470.0 |
+| `GET /transactions/{id}` | 4,324 | 73.09 | 9.5 | 14.0 | 16.0 | 27.5 |
+| `GET /transactions?page=1&size=10` | 2,243 | 37.92 | 7.0 | 11.0 | 14.0 | 770.0 |
+| `GET /transactions?page=2&size=10` | 2,267 | 38.32 | 8.0 | 12.0 | 14.0 | 1,100.0 |
+
+> **Phân tích kết quả:**
+> - Các API tra cứu dữ liệu (`GET /users/me`, xem chi tiết/lịch sử giao dịch etc) có thời gian xử lý cực nhanh: median (p50)  từ **5.0ms – 9.5ms**, 95% requests dưới **17ms**.
+> - Các API xác thực (`/auth/login`, `/auth/register`) có độ trễ lớn hơn do thuật toán băm bảo mật mật khẩu **BCrypt** 
+> - Tỷ lệ lỗi là **0.00%** trên toàn bộ 16,671 lượt gọi
+
 ---
 
 
