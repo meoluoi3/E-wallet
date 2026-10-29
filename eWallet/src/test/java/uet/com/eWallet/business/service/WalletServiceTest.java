@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -98,30 +99,6 @@ class WalletServiceTest {
     }
 
     @Test
-    void getWalletByUserIdReturnsWallet() {
-        UUID userId = UUID.randomUUID();
-        Wallet wallet = wallet("0", WalletStatus.ACTIVE);
-        when(walletRepository.findByUser_Id(userId)).thenReturn(Optional.of(wallet));
-
-        assertSame(wallet, walletService.getWalletByUserId(userId));
-    }
-
-    @Test
-    void getWalletByUserIdRejectsMissingWallet() {
-        UUID userId = UUID.randomUUID();
-
-        assertError(ErrorCode.WALLET_NOT_FOUND, () -> walletService.getWalletByUserId(userId));
-
-        verify(walletRepository).findByUser_Id(userId);
-    }
-
-    @Test
-    void getWalletByUserIdRejectsNullId() {
-        assertError(ErrorCode.INVALID_INPUT, () -> walletService.getWalletByUserId(null));
-        verifyNoInteractions(walletRepository);
-    }
-
-    @Test
     void getWalletByIdReturnsWallet() {
         Wallet wallet = wallet("0", WalletStatus.ACTIVE);
         when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
@@ -153,15 +130,69 @@ class WalletServiceTest {
     }
 
     @Test
+    void getMyWalletRejectsUserWithoutWallet() {
+        UUID userId = UUID.randomUUID();
+        authenticate(userId);
+        when(walletRepository.findByUser_Id(userId)).thenReturn(Optional.empty());
+
+        assertError(ErrorCode.WALLET_NOT_FOUND, () -> walletService.getMyWallet());
+    }
+
+    @Test
     void getMyWalletRejectsUnauthenticatedUser() {
         assertError(ErrorCode.UNAUTHENTICATED, () -> walletService.getMyWallet());
         verifyNoInteractions(walletRepository);
     }
 
     @Test
+    void getMyWalletIdReturnsIdOfAuthenticatedUsersWallet() {
+        UUID userId = UUID.randomUUID();
+        UUID walletId = UUID.randomUUID();
+        authenticate(userId);
+        when(walletRepository.findIdByUserId(userId)).thenReturn(Optional.of(walletId));
+
+        assertEquals(walletId, walletService.getMyWalletId());
+    }
+
+    @Test
+    void getMyWalletIdRejectsUnauthenticatedUser() {
+        assertError(ErrorCode.UNAUTHENTICATED, () -> walletService.getMyWalletId());
+    }
+
+    @Test
+    void getMyWalletIdRejectsUserWithoutWallet() {
+        UUID userId = UUID.randomUUID();
+        authenticate(userId);
+        when(walletRepository.findIdByUserId(userId)).thenReturn(Optional.empty());
+
+        assertError(ErrorCode.WALLET_NOT_FOUND, () -> walletService.getMyWalletId());
+    }
+
+    @Test
+    void lockForUpdateLocksWalletsInIdOrderRegardlessOfArgumentOrder() {
+        UUID low = new UUID(0, 1);
+        UUID high = new UUID(0, 2);
+        when(walletRepository.findByIdForUpdate(any())).thenReturn(Optional.of(new Wallet()));
+
+        walletService.lockForUpdate(high, low);
+
+        InOrder order = inOrder(walletRepository);
+        order.verify(walletRepository).findByIdForUpdate(low);
+        order.verify(walletRepository).findByIdForUpdate(high);
+    }
+
+    @Test
+    void lockForUpdateRejectsUnknownWallet() {
+        UUID id = UUID.randomUUID();
+        when(walletRepository.findByIdForUpdate(id)).thenReturn(Optional.empty());
+
+        assertError(ErrorCode.WALLET_NOT_FOUND, () -> walletService.lockForUpdate(id));
+    }
+
+    @Test
     void creditAddsPositiveAmount() {
         Wallet wallet = wallet("100000", WalletStatus.ACTIVE);
-        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByIdForUpdate(wallet.getId())).thenReturn(Optional.of(wallet));
         when(walletRepository.save(wallet)).thenReturn(wallet);
 
         Wallet result = walletService.credit(wallet.getId(), new BigDecimal("50000"));
@@ -174,7 +205,7 @@ class WalletServiceTest {
     void creditTreatsNullBalanceAsZero() {
         Wallet wallet = wallet("0", WalletStatus.ACTIVE);
         wallet.setBalance(null);
-        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByIdForUpdate(wallet.getId())).thenReturn(Optional.of(wallet));
         when(walletRepository.save(wallet)).thenReturn(wallet);
 
         Wallet result = walletService.credit(wallet.getId(), new BigDecimal("50000"));
@@ -204,7 +235,7 @@ class WalletServiceTest {
     @Test
     void creditRejectsClosedWallet() {
         Wallet wallet = wallet("0", WalletStatus.CLOSED);
-        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByIdForUpdate(wallet.getId())).thenReturn(Optional.of(wallet));
 
         assertError(ErrorCode.WALLET_NOT_ACTIVE,
                 () -> walletService.credit(wallet.getId(), new BigDecimal("1")));
@@ -215,7 +246,7 @@ class WalletServiceTest {
     @Test
     void debitSubtractsValidAmount() {
         Wallet wallet = wallet("100000", WalletStatus.ACTIVE);
-        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByIdForUpdate(wallet.getId())).thenReturn(Optional.of(wallet));
         when(walletRepository.save(wallet)).thenReturn(wallet);
 
         Wallet result = walletService.debit(wallet.getId(), new BigDecimal("40000"));
@@ -245,7 +276,7 @@ class WalletServiceTest {
     @Test
     void debitRejectsInsufficientBalance() {
         Wallet wallet = wallet("100000", WalletStatus.ACTIVE);
-        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByIdForUpdate(wallet.getId())).thenReturn(Optional.of(wallet));
 
         assertError(ErrorCode.INSUFFICIENT_BALANCE,
                 () -> walletService.debit(wallet.getId(), new BigDecimal("100001")));
@@ -257,7 +288,7 @@ class WalletServiceTest {
     @Test
     void debitEntireBalanceLeavesZero() {
         Wallet wallet = wallet("100000", WalletStatus.ACTIVE);
-        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByIdForUpdate(wallet.getId())).thenReturn(Optional.of(wallet));
         when(walletRepository.save(wallet)).thenReturn(wallet);
 
         Wallet result = walletService.debit(wallet.getId(), new BigDecimal("100000"));
@@ -269,7 +300,7 @@ class WalletServiceTest {
     @Test
     void debitRejectsClosedWallet() {
         Wallet wallet = wallet("100000", WalletStatus.CLOSED);
-        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByIdForUpdate(wallet.getId())).thenReturn(Optional.of(wallet));
 
         assertError(ErrorCode.WALLET_NOT_ACTIVE,
                 () -> walletService.debit(wallet.getId(), new BigDecimal("1")));
@@ -308,6 +339,16 @@ class WalletServiceTest {
         assertError(ErrorCode.WALLET_NOT_ACTIVE, () -> walletService.closeWallet(wallet.getId()));
 
         verify(walletRepository, never()).save(any());
+    }
+
+    private void authenticate(UUID userId) {
+        UserPrincipal principal = UserPrincipal.builder()
+                .id(userId)
+                .username("wallet-user")
+                .status(UserStatus.ACTIVE)
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 
     private Wallet wallet(String balance, WalletStatus status) {

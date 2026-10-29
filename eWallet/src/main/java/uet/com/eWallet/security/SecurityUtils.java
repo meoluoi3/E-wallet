@@ -20,14 +20,4 @@ public class SecurityUtils {
         return null;
     }
 
-
-    public static String getCurrentUsername() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
-            return principal.getUsername();
-        }
-
-        return null;
-    }
 }
