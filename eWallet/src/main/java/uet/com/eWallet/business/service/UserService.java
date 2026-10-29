@@ -26,6 +26,8 @@ public class UserService {
 
     UserMapper userMapper;
 
+    WalletService walletService;
+
 
     public UserResponse getMyProfile() {
         UUID currentUserId = SecurityUtils.getCurrentUserId();
@@ -37,7 +39,9 @@ public class UserService {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        return userMapper.toUserResponse(user);
+        UserResponse response = userMapper.toUserResponse(user);
+        response.setBalance(walletService.getMyWallet().getBalance());
+        return response;
     }
 
 

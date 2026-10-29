@@ -64,7 +64,7 @@
 | **Cơ sở dữ liệu** | PostgreSQL | 16-alpine | RDBMS lưu trữ dữ liệu chính |
 | **Object Mapping** | MapStruct + Lombok | 1.6.3 | Ánh xạ tự động DTO ↔ Entity, giảm boilerplate code |
 | **Validation** | Jakarta Bean Validation | Tích hợp | Kiểm tra tính hợp lệ của request payload đầu vào |
-| **Đặc tả API** | SpringDoc OpenAPI (Swagger UI) | 3.1.1 | Sinh tài liệu OpenAPI 3.0 tự động (`/swagger-ui/index.html`) |
+| **Đặc tả API** | SpringDoc OpenAPI (Swagger UI) | 3.2.0 | Sinh tài liệu OpenAPI 3.0 tự động (`/swagger-ui/index.html`) |
 | **Đóng gói** | Docker & Docker Compose | Multi-stage | Đóng gói ứng dụng chạy độc lập cùng database |
 | **Load Testing** | Locust (Python) | 2.x | Kiểm thử tải đồng thời các kịch bản nạp tiền/xem lịch sử |
 | **CI Pipeline** | GitHub Actions | v4 | Tự động build, kiểm tra phụ thuộc và chạy Unit/Mock Tests |
@@ -334,21 +334,24 @@ Phần này hướng dẫn các nhóm nhận bàn giao **Pha 2** có thể clone
 
 ---
 
-### Cách 1: Khởi chạy trọn gói bằng Docker Compose 
-Chỉ cần 1 câu lệnh duy nhất để build ứng dụng và khởi tạo cơ sở dữ liệu:
+### Cách 1: Khởi chạy trọn gói bằng Docker Compose
+Tạo `.env` từ `.env.example`, đặt `DB_PASSWORD` và `JWT_SECRET` (chuỗi ngẫu nhiên dài ít nhất 32 byte), rồi khởi chạy:
 
 ```bash
 # 1. Clone repository về máy
 git clone <repository_url>
 cd eWallet
 
-# 2. Khởi chạy toàn bộ hệ thống 
+# 2. Tạo .env và sửa hai giá trị bí mật trong file
+cp .env.example .env
+
+# 3. Khởi chạy toàn bộ hệ thống
 docker compose up -d --build
 ```
 
 - **Backend API**: `http://localhost:8081`
 - **Swagger UI**: `http://localhost:8081/swagger-ui/index.html`
-- **PostgreSQL Database**: `localhost:5433` (User: `postgres`, Pass: `password123`, DB: `ewallet_db`)
+- **PostgreSQL Database**: `localhost:5433` (User: `postgres`, Pass: giá trị `DB_PASSWORD` trong `.env`, DB: `ewallet_db`)
 
 Dừng hệ thống:
 ```bash

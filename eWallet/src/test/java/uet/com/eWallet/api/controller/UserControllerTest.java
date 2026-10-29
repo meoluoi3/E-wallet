@@ -13,6 +13,7 @@ import uet.com.eWallet.api.dto.response.UserResponse;
 import uet.com.eWallet.business.service.UserService;
 import uet.com.eWallet.data.entity.UserStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -38,7 +39,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/me - Thành công trả về 200 và thông tin cá nhân")
+    @DisplayName("GET /users/me - Thành công trả về 200, thông tin cá nhân và số dư ví")
     void getMyProfile_Success_ReturnsProfile() throws Exception {
         UUID userId = UUID.randomUUID();
         UserResponse userResponse = UserResponse.builder()
@@ -48,6 +49,7 @@ class UserControllerTest {
                 .phone("0987654321")
                 .email("tuan@example.com")
                 .status(UserStatus.ACTIVE)
+                .balance(new BigDecimal("125000"))
                 .createdAt(Instant.now())
                 .build();
 
@@ -57,7 +59,8 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.result.username").value("tuandq"))
-                .andExpect(jsonPath("$.result.fullName").value("Đinh Quang Tuân"));
+                .andExpect(jsonPath("$.result.fullName").value("Đinh Quang Tuân"))
+                .andExpect(jsonPath("$.result.balance").value(125000));
     }
 
     @Test
