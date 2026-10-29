@@ -413,29 +413,27 @@ locust -f loadtest/locustfile.py --host=http://localhost:8081
 ```
 Mở trình duyệt truy cập `http://localhost:8089` để cấu hình số lượng User đồng thời và xem biểu đồ throughput (RPS) / latency.
 
-#### Kết quả kiểm thử tải thực tế (Stress Test Report)
+#### Kết quả kiểm thử tải (Stress Test)
 
-**Kịch bản kiểm nghiệm:**
-* **Quy mô tải (Concurrency):** `100 users` đồng thời gửi request liên tục.
-* **Thời gian chạy kiểm thử:** `1 phút` (60 giây).
-* **Thời gian giãn cách (Think time):** Ngẫu nhiên từ `0.1s – 0.5s` giữa các request (`between(0.1, 0.5)`).
-* **Mục tiêu:** Kiểm tra độ ổn định, khả năng chịu tải và đo lường thông lượng (RPS) thực tế của backend dưới áp lực cao.
+**Kịch bản:** 100 users chạy đồng thời trong 1 phút, mỗi request cách nhau 0.1 - 0.5s (`between(0.1, 0.5)`). 
 
-**1. Chỉ số tổng quan (Overall Summary):**
+**1. Tổng quan**
 
-| Chỉ số đo lường (Metric) | Kết quả thực tế | Ý nghĩa |
-|---|:---:|---|
-| **File dữ liệu nguồn** | `result_stress_stats.csv` | Báo cáo trích xuất trực tiếp từ Locust |
-| **Tổng số request (Total Requests)** | **16,671** | Khối lượng truy vấn xử lý trong 60s |
-| **Tỷ lệ lỗi (Total Failures)** | **0 (0.00%)** | Toàn bộ 16,671 requests đều phản hồi thành công |
-| **Thông lượng (Throughput / RPS)** | **281.81 req/s** | Khả năng phục vụ trung bình hơn 280 req/giây |
-| **Độ trễ phản hồi (Min / Avg / Max)** | 2.5 ms / **44.3 ms** / 6,110.9 ms | Thời gian xử lý trung bình đạt mức 44.3ms |
-| **Phân vị độ trễ (p50 / p90 / p95)** | **6.0 ms** / **14.0 ms** / **17.0 ms** | 95% request hoàn tất dưới 17ms |
-| **p99 Latency / Tỷ lệ p99/p50** | 1,600.0 ms / 266.7 | Độ trễ cao nhất tập trung ở băm mật khẩu khi login/register |
+Số liệu lấy từ `result_stress_stats.csv` (xuất từ Locust).
 
-**2. Chi tiết độ trễ và thông lượng theo từng API Endpoint:**
+| Chỉ số | Kết quả |
+|---|:---:|
+| Tổng số request | 16,671 |
+| Số request lỗi | 0 (0.00%) |
+| Thông lượng (RPS) | 281.81 req/s |
+| Độ trễ Min / Avg / Max | 2.5 ms / 44.3 ms / 6,110.9 ms |
+| Độ trễ p50 / p90 / p95 | 6.0 ms / 14.0 ms / 17.0 ms |
+| Độ trễ p99 | 1,600.0 ms |
+| Tỷ lệ p99/p50 | 266.7 |
 
-| Endpoint (Display Name) | Tổng Request | Requests/s (RPS) | Median p50 (ms) | 90% (p90) | 95% (p95) | 99% (p99) |
+**2. Chi tiết theo endpoint**
+
+| Endpoint | Tổng request | RPS | p50 (ms) | p90 (ms) | p95 (ms) | p99 (ms) |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | `POST /auth/register` | 100 | 1.69 | 1,500.0 | 2,600.0 | 3,700.0 | 4,700.0 |
 | `POST /auth/login` | 100 | 1.69 | 1,900.0 | 3,100.0 | 3,700.0 | 5,100.0 |
